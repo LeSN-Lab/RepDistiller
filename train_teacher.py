@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 from models import model_dict
 
 from dataset.cifar100 import get_cifar100_dataloaders
-
+from dataset.cifar10 import get_cifar10_dataloaders
 from helper.util import adjust_learning_rate, accuracy, AverageMeter
 from helper.loops import train_vanilla as train, validate
 
@@ -45,7 +45,7 @@ def parse_option():
                                  'resnet8x4', 'resnet32x4', 'wrn_16_1', 'wrn_16_2', 'wrn_40_1', 'wrn_40_2',
                                  'vgg8', 'vgg11', 'vgg13', 'vgg16', 'vgg19',
                                  'MobileNetV2', 'ShuffleV1', 'ShuffleV2', ])
-    parser.add_argument('--dataset', type=str, default='cifar100', choices=['cifar100'], help='dataset')
+    parser.add_argument('--dataset', type=str, default='cifar100', choices=['cifar100', 'cifar10'], help='dataset')
 
     parser.add_argument('-t', '--trial', type=int, default=0, help='the experiment id')
 
@@ -91,6 +91,9 @@ def main():
     if opt.dataset == 'cifar100':
         train_loader, val_loader = get_cifar100_dataloaders(batch_size=opt.batch_size, num_workers=opt.num_workers)
         n_cls = 100
+    elif opt.dataset == 'cifar10':
+        train_loader, val_loader = get_cifar10_dataloaders(batch_size=opt.batch_size, num_workers=opt.num_workers)
+        n_cls = 10
     else:
         raise NotImplementedError(opt.dataset)
 

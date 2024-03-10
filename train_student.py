@@ -21,6 +21,7 @@ from models.util import Embed, ConvReg, LinearEmbed
 from models.util import Connector, Translator, Paraphraser
 
 from dataset.cifar100 import get_cifar100_dataloaders, get_cifar100_dataloaders_sample
+from dataset.cifar10 import get_cifar10_dataloaders, get_cifar10_dataloaders_sample
 
 from helper.util import adjust_learning_rate
 
@@ -54,7 +55,7 @@ def parse_option():
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 
     # dataset
-    parser.add_argument('--dataset', type=str, default='cifar100', choices=['cifar100'], help='dataset')
+    parser.add_argument('--dataset', type=str, default='cifar100', choices=['cifar100', 'cifar10'], help='dataset')
 
     # model
     parser.add_argument('--model_s', type=str, default='resnet8',
@@ -140,6 +141,45 @@ def load_teacher(model_path, n_cls):
     return model
 
 
+def load_Resnet18_teacher():
+    from resnet import ResNet18
+
+    from collections import OrderedDict
+
+    print('==> loading teacher model')
+
+    torch_model = ResNet18()
+
+    # model.load_state_dict(torch.load(model_path)['model'])
+
+    checkpoint = torch.load('/home/shared/AI2/AI2_MODELS/Pytorch-Adversarial-Training-CIFAR/downloadcheckpoint/pgd_adversarial_training', map_location="cpu")
+
+    # torch_model.load_state_dict(checkpoint['model'])
+
+    
+
+    # 'module.' 접두어를 제거하기 위한 새로운 state_dict 생성
+
+    new_state_dict = OrderedDict()
+
+    
+
+    for k, v in checkpoint['net'].items():
+
+        name = k[7:] if k.startswith('module.') else k # 'module.' 접두어가 있으면 제거
+
+        new_state_dict[name] = v
+
+    
+
+    # 수정된 state_dict를 모델에 로드
+
+    torch_model.load_state_dict(new_state_dict)
+
+    print('==> done')
+
+    return torch_model
+
 def main():
     best_acc = 0
 
@@ -160,11 +200,24 @@ def main():
                                                                         num_workers=opt.num_workers,
                                                                         is_instance=True)
         n_cls = 100
+    elif opt.dataset == 'cifar10':
+        if opt.distill in ['crd']:
+            train_loader, val_loader, n_data = get_cifar10_dataloaders_sample(batch_size=opt.batch_size,
+                                                                               num_workers=opt.num_workers,
+                                                                               k=opt.nce_k,
+                                                                               mode=opt.mode)
+        else:
+            train_loader, val_loader, n_data = get_cifar10_dataloaders(batch_size=opt.batch_size,
+                                                                        num_workers=opt.num_workers,
+                                                                        is_instance=True)
+        n_cls = 10
     else:
         raise NotImplementedError(opt.dataset)
 
     # model
-    model_t = load_teacher(opt.path_t, n_cls)
+    model_t = load_Resnet18_teacher()
+    # model_t = load_teacher(opt.path_t, n_cls)
+    
     model_s = model_dict[opt.model_s](num_classes=n_cls)
 
     data = torch.randn(2, 3, 32, 32)
